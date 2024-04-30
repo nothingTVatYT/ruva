@@ -1,0 +1,59 @@
+package net.nothingtv.ruva.client.terrain;
+
+
+import net.nothingtv.ruva.client.tools.OpenSimplex2S;
+
+public class NoiseHeightSampler extends DefaultHeightSampler {
+
+    private int seed;
+    private float heightScale;
+    private int octaves;
+    private float waveLength;
+    private float mapWidth, mapHeight;
+    private float exponent;
+    private float maxHeight;
+
+    public NoiseHeightSampler(int seed, float heightScale, int octaves, float waveLength, float exponent) {
+        this.seed = seed;
+        this.heightScale = heightScale;
+        this.octaves = octaves;
+        this.waveLength = waveLength;
+        this.exponent = exponent;
+        float e = 0;
+        float gain = 0;
+        float factor;
+        for (int i = 0; i < octaves; i++) {
+            factor = 1f/(1<<i);
+            e += factor * 1.5f; // or whatever the noise function returns
+            gain += factor;
+        }
+        this.maxHeight = (float)Math.pow(e / gain, exponent) * heightScale;
+    }
+
+    @Override
+    public void init(Terrain terrain) {
+        super.init(terrain);
+        mapWidth = terrain.config.width;
+        mapHeight = terrain.config.height;
+    }
+
+    @Override
+    public float getHeight(float x, float z) {
+        float nx = x / mapWidth - 0.5f;
+        float nz = z / mapHeight - 0.5f;
+        float e = 0;
+        float factor;
+        float gain = 0;
+        for (int i = 0; i < octaves; i++) {
+            factor = 1f/(1<<i);
+            e += factor * (1f+ OpenSimplex2S.noise2(seed + i, nx * waveLength * (1<<i), nz * waveLength * (1<<i)));
+            gain += factor;
+        }
+        return (float)Math.pow(e / gain, exponent) * heightScale;
+    }
+
+    @Override
+    public float getMaxHeight() {
+        return maxHeight;
+    }
+}
